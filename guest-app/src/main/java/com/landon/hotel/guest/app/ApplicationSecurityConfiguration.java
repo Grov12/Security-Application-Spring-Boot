@@ -1,6 +1,6 @@
 package com.landon.hotel.guest.app;
 
-import com.landon.hotel.guest.app.auth.AppserDetailsService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,25 +13,16 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.LdapShaPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class ApplicationSecurityConfiguration extends WebSecurityConfigurerAdapter {
-    @Autowired
-    private AppserDetailsService detailsService;
 
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(detailsService);
-        provider.setPasswordEncoder(new BCryptPasswordEncoder(11));
-        provider.setAuthoritiesMapper(authoritiesMapper());
-
-        return provider;
-    }
 
     @Bean
     public GrantedAuthoritiesMapper authoritiesMapper() {
@@ -45,7 +36,28 @@ public class ApplicationSecurityConfiguration extends WebSecurityConfigurerAdapt
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.authenticationProvider(authenticationProvider());
+        auth
+                .ldapAuthentication()
+                .userDnPatterns("uid={0},ou=people")
+                .groupSearchBase("ou=groups")
+                .authoritiesMapper(authoritiesMapper())
+                .contextSource()
+                .url("ldap://localhost:8389/dc=frankmoley,dc=com")
+                .and()
+                .passwordCompare()
+                .passwordEncoder(passwordEncoder())
+                .passwordAttribute("userPassword");
+
+
+
+
+}
+
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(11);
+        return passwordEncoder;
     }
 
     @Override
